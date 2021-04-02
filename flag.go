@@ -912,7 +912,7 @@ func (f *FlagSet) failf(format string, a ...interface{}) error {
 // or the appropriate default usage function otherwise.
 func (f *FlagSet) usage() {
 	if f.Usage == nil {
-			f.defaultUsage()
+		f.defaultUsage()
 	} else {
 		f.Usage()
 	}
@@ -938,11 +938,6 @@ func (f *FlagSet) parseOne() (bool, error) {
 	name := s[numMinuses:]
 	if len(name) == 0 || name[0] == '-' || name[0] == '=' {
 		return false, f.failf("bad flag syntax: %s", s)
-	}
-
-	// ignore go test flags
-	if strings.HasPrefix(name, "test.") {
-		return false, nil
 	}
 
 	// it's a flag. does it have an argument?
