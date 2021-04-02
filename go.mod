@@ -1,3 +1,3 @@
 module github.com/jnovack/flag
 
-go 1.15
+go 1.16
