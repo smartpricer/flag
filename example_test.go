@@ -22,6 +22,7 @@ var species = flag.String("species", "gopher", "the species we are studying")
 var gopherType string
 
 func init() {
+	_ = species // ignore species unused
 	const (
 		defaultGopher = "pocket"
 		usage         = "the variety of gopher"
