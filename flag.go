@@ -41,6 +41,7 @@ Define flags using [flag.String], [Bool], [Int], etc.
 		fmt.Println("flagvar has value ", flagvar)
 
 	After parsing, the arguments following the flags are available as the
+
 slice [flag.Args] or individually as [flag.Arg](i).
 The arguments are indexed from 0 through [flag.NArg]-1.
 
@@ -54,6 +55,7 @@ The arguments are indexed from 0 through [flag.NArg]-1.
 		-flag x  // non-boolean flags only
 
 One or two dashes may be used; they are equivalent.
+
 	The last form is not permitted for boolean flags because the
 	meaning of the command
 
@@ -74,9 +76,13 @@ One or two dashes may be used; they are equivalent.
 	Duration flags accept any input valid for time.ParseDuration.
 
 	The default set of command-line flags is controlled by
+
 top-level functions.  The [FlagSet] type allows one to define
+
 	independent sets of flags, such as to implement subcommands
+
 in a command-line interface. The methods of [FlagSet] are
+
 	analogous to the top-level functions for the command-line
 	flag set.
 */
@@ -295,11 +301,57 @@ func (d *durationValue) Get() any { return time.Duration(*d) }
 
 func (d *durationValue) String() string { return (*time.Duration)(d).String() }
 
+// -- encoding.TextUnmarshaler Value
+type textValue struct{ p encoding.TextUnmarshaler }
+
+func newTextValue(val encoding.TextMarshaler, p encoding.TextUnmarshaler) textValue {
+	ptrVal := reflect.ValueOf(p)
+	if ptrVal.Kind() != reflect.Ptr {
+		panic("variable value type must be a pointer")
+	}
+	defVal := reflect.ValueOf(val)
+	if defVal.Kind() == reflect.Ptr {
+		defVal = defVal.Elem()
+	}
+	if defVal.Type() != ptrVal.Type().Elem() {
+		panic(fmt.Sprintf("default type does not match variable type: %v != %v", defVal.Type(), ptrVal.Type().Elem()))
+	}
+	ptrVal.Elem().Set(defVal)
+	return textValue{p}
+}
+
+func (v textValue) Set(s string) error {
+	return v.p.UnmarshalText([]byte(s))
+}
+
+func (v textValue) Get() interface{} {
+	return v.p
+}
+
+func (v textValue) String() string {
+	if m, ok := v.p.(encoding.TextMarshaler); ok {
+		if b, err := m.MarshalText(); err == nil {
+			return string(b)
+		}
+	}
+	return ""
+}
+
+// -- func Value
 type funcValue func(string) error
 
 func (f funcValue) Set(s string) error { return f(s) }
 
 func (f funcValue) String() string { return "" }
+
+// -- boolFunc Value
+type boolFuncValue func(string) error
+
+func (f boolFuncValue) Set(s string) error { return f(s) }
+
+func (f boolFuncValue) String() string { return "" }
+
+func (f boolFuncValue) IsBoolFlag() bool { return true }
 
 // Value is the interface to the dynamic value stored in a flag.
 // (The default value is represented as a string.)
@@ -355,7 +407,8 @@ type FlagSet struct {
 	envPrefix     string   // prefix to all env variable names /* jnovack/flag */
 	args          []string // arguments after flags
 	errorHandling ErrorHandling
-	output        io.Writer // nil means stderr; use Output() accessor
+	output        io.Writer         // nil means stderr; use Output() accessor
+	undef         map[string]string // flags which didn't exist at the time of Set
 }
 
 // A Flag represents the state of a flag.
@@ -446,8 +499,29 @@ func Lookup(name string) *Flag {
 
 // Set sets the value of the named flag.
 func (f *FlagSet) Set(name, value string) error {
+	return f.set(name, value)
+}
+func (f *FlagSet) set(name, value string) error {
 	flag, ok := f.formal[name]
 	if !ok {
+		// Remember that a flag that isn't defined is being set.
+		// We return an error in this case, but in addition if
+		// subsequently that flag is defined, we want to panic
+		// at the definition point.
+		// This is a problem which occurs if both the definition
+		// and the Set call are in init code and for whatever
+		// reason the init code changes evaluation order.
+		// See issue 57411.
+		_, file, line, ok := runtime.Caller(2)
+		if !ok {
+			file = "?"
+			line = 0
+		}
+		if f.undef == nil {
+			f.undef = map[string]string{}
+		}
+		f.undef[name] = fmt.Sprintf("%s:%d", file, line)
+
 		return fmt.Errorf("no such flag -%v", name)
 	}
 	err := flag.Value.Set(value)
@@ -463,23 +537,34 @@ func (f *FlagSet) Set(name, value string) error {
 
 // Set sets the value of the named command-line flag.
 func Set(name, value string) error {
-	return CommandLine.Set(name, value)
+	return CommandLine.set(name, value)
 }
 
 // isZeroValue determines whether the string represents the zero
 // value for a flag.
-func isZeroValue(flag *Flag, value string) bool {
+func isZeroValue(flag *Flag, value string) (ok bool, err error) {
 	// Build a zero value of the flag's Value type, and see if the
 	// result of calling its String method equals the value passed in.
 	// This works unless the Value type is itself an interface type.
 	typ := reflect.TypeOf(flag.Value)
 	var z reflect.Value
-	if typ.Kind() == reflect.Ptr {
+	if typ.Kind() == reflect.Pointer {
 		z = reflect.New(typ.Elem())
 	} else {
 		z = reflect.Zero(typ)
 	}
-	return value == z.Interface().(Value).String()
+	// Catch panics calling the String method, which shouldn't prevent the
+	// usage message from being printed, but that we should report to the
+	// user so that they know to fix their code.
+	defer func() {
+		if e := recover(); e != nil {
+			if typ.Kind() == reflect.Pointer {
+				typ = typ.Elem()
+			}
+			err = fmt.Errorf("panic calling String method on zero %v for flag %s: %v", typ, flag.Name, e)
+		}
+	}()
+	return value == z.Interface().(Value).String(), nil
 }
 
 // UnquoteUsage extracts a back-quoted name from the usage
@@ -507,7 +592,7 @@ func UnquoteUsage(flag *Flag) (name string, usage string) {
 	switch fv := flag.Value.(type) {
 	case boolFlag:
 		if fv.IsBoolFlag() {
-		name = ""
+			name = ""
 		}
 	case *durationValue:
 		name = "duration"
@@ -527,33 +612,49 @@ func UnquoteUsage(flag *Flag) (name string, usage string) {
 // default values of all defined command-line flags in the set. See the
 // documentation for the global function PrintDefaults for more information.
 func (f *FlagSet) PrintDefaults() {
+	var isZeroValueErrs []error
 	f.VisitAll(func(flag *Flag) {
-		s := fmt.Sprintf("  -%s", flag.Name) // Two spaces before -; see next two comments.
+		var b strings.Builder
+		fmt.Fprintf(&b, "  -%s", flag.Name) // Two spaces before -; see next two comments.
 		name, usage := UnquoteUsage(flag)
 		if len(name) > 0 {
-			s += " " + name
+			b.WriteString(" ")
+			b.WriteString(name)
 		}
 		// Boolean flags of one ASCII letter are so common we
 		// treat them specially, putting their usage on the same line.
-		if len(s) <= 4 { // space, space, '-', 'x'.
-			s += "\t"
+		if b.Len() <= 4 { // space, space, '-', 'x'.
+			b.WriteString("\t")
 		} else {
 			// Four spaces before the tab triggers good alignment
 			// for both 4- and 8-space tab stops.
-			s += "\n    \t"
+			b.WriteString("\n    \t")
 		}
-		s += strings.ReplaceAll(usage, "\n", "\n    \t")
+		b.WriteString(strings.ReplaceAll(usage, "\n", "\n    \t"))
 
-		if !isZeroValue(flag, flag.DefValue) {
+		// Print the default value only if it differs to the zero value
+		// for this flag type.
+		if isZero, err := isZeroValue(flag, flag.DefValue); err != nil {
+			isZeroValueErrs = append(isZeroValueErrs, err)
+		} else if !isZero {
 			if _, ok := flag.Value.(*stringValue); ok {
 				// put quotes on the value
-				s += fmt.Sprintf(" (default %q)", flag.DefValue)
+				fmt.Fprintf(&b, " (default %q)", flag.DefValue)
 			} else {
-				s += fmt.Sprintf(" (default %v)", flag.DefValue)
+				fmt.Fprintf(&b, " (default %v)", flag.DefValue)
 			}
 		}
-		fmt.Fprint(f.Output(), s, "\n")
+		fmt.Fprint(f.Output(), b.String(), "\n")
 	})
+	// If calling String on any zero flag.Values triggered a panic, print
+	// the messages after the full set of defaults so that the programmer
+	// knows to fix the panic.
+	if errs := isZeroValueErrs; len(errs) > 0 {
+		fmt.Fprintln(f.Output())
+		for _, err := range errs {
+			fmt.Fprintln(f.Output(), err)
+		}
+	}
 }
 
 // PrintDefaults prints, to standard error unless configured otherwise,
@@ -861,6 +962,24 @@ func Duration(name string, value time.Duration, usage string) *time.Duration {
 	return CommandLine.Duration(name, value, usage)
 }
 
+// TextVar defines a flag with a specified name, default value, and usage string.
+// The argument p must be a pointer to a variable that will hold the value
+// of the flag, and p must implement encoding.TextUnmarshaler.
+// If the flag is used, the flag value will be passed to p's UnmarshalText method.
+// The type of the default value must be the same as the type of p.
+func (f *FlagSet) TextVar(p encoding.TextUnmarshaler, name string, value encoding.TextMarshaler, usage string) {
+	f.Var(newTextValue(value, p), name, usage)
+}
+
+// TextVar defines a flag with a specified name, default value, and usage string.
+// The argument p must be a pointer to a variable that will hold the value
+// of the flag, and p must implement encoding.TextUnmarshaler.
+// If the flag is used, the flag value will be passed to p's UnmarshalText method.
+// The type of the default value must be the same as the type of p.
+func TextVar(p encoding.TextUnmarshaler, name string, value encoding.TextMarshaler, usage string) {
+	CommandLine.Var(newTextValue(value, p), name, usage)
+}
+
 // Func defines a flag with the specified name and usage string.
 // Each time the flag is seen, fn is called with the value of the flag.
 // If fn returns a non-nil error, it will be treated as a flag value parsing error.
@@ -873,6 +992,20 @@ func (f *FlagSet) Func(name, usage string, fn func(string) error) {
 // If fn returns a non-nil error, it will be treated as a flag value parsing error.
 func Func(name, usage string, fn func(string) error) {
 	CommandLine.Func(name, usage, fn)
+}
+
+// BoolFunc defines a flag with the specified name and usage string without requiring values.
+// Each time the flag is seen, fn is called with the value of the flag.
+// If fn returns a non-nil error, it will be treated as a flag value parsing error.
+func (f *FlagSet) BoolFunc(name, usage string, fn func(string) error) {
+	f.Var(boolFuncValue(fn), name, usage)
+}
+
+// BoolFunc defines a flag with the specified name and usage string without requiring values.
+// Each time the flag is seen, fn is called with the value of the flag.
+// If fn returns a non-nil error, it will be treated as a flag value parsing error.
+func BoolFunc(name, usage string, fn func(string) error) {
+	CommandLine.BoolFunc(name, usage, fn)
 }
 
 // Var defines a flag with the specified name and usage string. The type and
@@ -900,6 +1033,9 @@ func (f *FlagSet) Var(value Value, name string, usage string) {
 			msg = f.sprintf("%s flag redefined: %s", f.name, name)
 		}
 		panic(msg) // Happens only if flags are declared with identical names
+	}
+	if pos := f.undef[name]; pos != "" {
+		panic(fmt.Sprintf("flag %s set at %s before being defined", name, pos))
 	}
 	if f.formal == nil {
 		f.formal = make(map[string]*Flag)
