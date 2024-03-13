@@ -400,15 +400,24 @@ type FlagSet struct {
 	// to ExitOnError, which exits the program after calling Usage.
 	Usage func()
 
-	name          string
-	parsed        bool
-	actual        map[string]*Flag
-	formal        map[string]*Flag
-	envPrefix     string   // prefix to all env variable names /* jnovack/flag */
-	args          []string // arguments after flags
+	// the name of the flagset
+	name string
+	// if the flagset has been parsed
+	parsed bool
+	// actual has the flags which are already set
+	actual map[string]*Flag
+	// formal has the flags which are registered
+	formal map[string]*Flag
+	// prefix to all env variable names /* jnovack/flag */
+	envPrefix string
+	// arguments after flags
+	args []string
+	// ErrorHandling defines how [FlagSet.Parse] behaves if the parse fails
 	errorHandling ErrorHandling
-	output        io.Writer         // nil means stderr; use Output() accessor
-	undef         map[string]string // flags which didn't exist at the time of Set
+	// nil means stderr; use Output() accessor
+	output io.Writer
+	// flags which didn't exist at the time of Set
+	undef map[string]string
 }
 
 // A Flag represents the state of a flag.
