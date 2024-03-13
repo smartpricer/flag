@@ -6,5 +6,5 @@ include go.mk
 all: update
 
 update:
-	./update_flag.sh
+	bash update_flag.sh
 
