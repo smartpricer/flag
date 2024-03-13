@@ -1,6 +1,6 @@
 #!/bin/bash
 
-clean=$(git status | grep "nothing to commit (working directory clean)")
+clean=$(git status | grep "nothing to commit, working tree clean")
 if [ -z "$clean" ]; then
     echo There are uncommitted changes.
     echo Updating will overwrite, commit or stash first.
