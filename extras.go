@@ -6,6 +6,7 @@ package flag
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 	"strings"
 )
@@ -14,12 +15,7 @@ import (
 // flag name before looking it up in the environment variables.
 var EnvironmentPrefix = ""
 
-// ParseEnv parses flags from environment variables.
-// Flags already set will be ignored.
-func (f *FlagSet) ParseEnv(environ []string) error {
-
-	m := f.formal
-
+func parseEnvToMap(environ []string) map[string]string {
 	env := make(map[string]string)
 	for _, s := range environ {
 		i := strings.Index(s, "=")
@@ -28,16 +24,48 @@ func (f *FlagSet) ParseEnv(environ []string) error {
 		}
 		env[s[0:i]] = s[i+1:]
 	}
+	return env
+}
 
-	for _, flag := range m {
-		name := flag.Name
-		_, set := f.actual[name]
-		if set {
+func flagNameToEnvKey(name, envPrefix string) string {
+	envKey := strings.ToUpper(name)
+	if envPrefix != "" {
+		envKey = envPrefix + "_" + envKey
+	}
+	// Replace all dashes (-) with underscores (_)
+	envKey = strings.Replace(envKey, "-", "_", -1)
+	// Replace all periods (.) with underscores (_)
+	envKey = strings.Replace(envKey, ".", "_", -1)
+	return envKey
+}
+
+// ParseEnv parses flags from environment variables.
+// Flags already set will be ignored.
+func (f *FlagSet) ParseEnv(environ []string) error {
+
+	// Get the registered flags
+	// flags := f.formal
+
+	// Create a map of all environment variables
+	env := parseEnvToMap(environ)
+
+	// Iterate over all registered flags
+	for _, registeredFlag := range f.formal {
+		name := registeredFlag.Name
+		// if flag has already been set, skip it
+		_, exist := f.actual[name]
+		if exist {
 			continue
 		}
 
-		flag, alreadythere := m[name]
-		if !alreadythere {
+		// TODO: can it even be possible to hit a non-existing flag due to the range func loop?
+		// TODO: who on earth would call help from an environment variable?
+		// seems like we are checking for unkown
+
+		//EXPLAIN
+		flag, exist := f.formal[name]
+		if !exist {
+			fmt.Printf("FERRIS: found a flag that does not exist: %s", name)
 			if name == "help" || name == "h" { // special case for nice help message.
 				f.usage()
 				return ErrHelp
@@ -45,37 +73,27 @@ func (f *FlagSet) ParseEnv(environ []string) error {
 			return f.failf("environment variable provided but not defined: %s", name)
 		}
 
-		envKey := strings.ToUpper(flag.Name)
-		if f.envPrefix != "" {
-			envKey = f.envPrefix + "_" + envKey
-		}
-		// Replace all dashes (-) with underscores (_)
-		envKey = strings.Replace(envKey, "-", "_", -1)
-		// Replace all periods (.) with underscores (_)
-		envKey = strings.Replace(envKey, ".", "_", -1)
+		envKey := flagNameToEnvKey(flag.Name, f.envPrefix)
 
-		value, isSet := env[envKey]
-		if !isSet {
+		envValue, exist := env[envKey]
+		if !exist {
 			continue
 		}
 
-		hasValue := false
-		if len(value) > 0 {
-			hasValue = true
-		}
+		isEmpty := len(envValue) <= 0
 
 		if fv, ok := flag.Value.(boolFlag); ok && fv.IsBoolFlag() { // special case: doesn't need an arg
-			if hasValue {
-				if err := fv.Set(value); err != nil {
-					return f.failf("invalid boolean value %q for environment variable %s: %v", value, name, err)
+			if !isEmpty {
+				if err := fv.Set(envValue); err != nil {
+					return f.failf("invalid boolean value %q for environment variable %s: %v", envValue, name, err)
 				}
 			} else {
 				// flag without value is regarded a bool
 				fv.Set("true")
 			}
 		} else {
-			if err := flag.Value.Set(value); err != nil {
-				return f.failf("invalid value %q for environment variable %s: %v", value, name, err)
+			if err := flag.Value.Set(envValue); err != nil {
+				return f.failf("invalid value %q for environment variable %s: %v", envValue, name, err)
 			}
 		}
 
