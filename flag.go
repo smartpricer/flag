@@ -1206,6 +1206,9 @@ func (f *FlagSet) parseExtras() error {
 		case ContinueOnError:
 			return err
 		case ExitOnError:
+			if err == ErrHelp {
+				os.Exit(0)
+			}
 			os.Exit(2)
 		case PanicOnError:
 			panic(err)
@@ -1227,6 +1230,9 @@ func (f *FlagSet) parseExtras() error {
 			case ContinueOnError:
 				return err
 			case ExitOnError:
+				if err == ErrHelp {
+					os.Exit(0)
+				}
 				os.Exit(2)
 			case PanicOnError:
 				panic(err)
