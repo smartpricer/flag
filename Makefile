@@ -9,5 +9,4 @@ update:
 	bash update_flag.sh
 
 tag-and-push:
-	git tag $(cat VERSION)
-	git push origin $(cat VERSION)
+	bash git_tag_push.sh
