@@ -1190,6 +1190,15 @@ func (f *FlagSet) Parse(arguments []string) error {
 		}
 	}
 
+	err := f.parseExtras()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (f *FlagSet) parseExtras() error {
 	// /* jnovack/flag BEGIN */
 	// Parse environment variables
 	if err := f.ParseEnv(os.Environ()); err != nil {
@@ -1226,7 +1235,6 @@ func (f *FlagSet) Parse(arguments []string) error {
 		}
 	}
 	// /* jnovack/flag END */
-
 	return nil
 }
 
