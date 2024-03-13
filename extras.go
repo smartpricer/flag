@@ -12,8 +12,8 @@ import (
 )
 
 var (
-// EnvironmentPrefix defines a string that will be implicitly prefixed to a
-// flag name before looking it up in the environment variables.
+	// EnvironmentPrefix defines a string that will be implicitly prefixed to a
+	// flag name before looking it up in the environment variables.
 	EnvironmentPrefix = ""
 
 	// DefaultConfigFlagname defines the flag name of the optional config file
@@ -94,7 +94,28 @@ func (f *FlagSet) ParseEnv(environ []string) error {
 
 		envValue, exist := env[envKey]
 		if !exist {
-			continue
+			// parsing of _FILE
+			if !ReadUnderscoreFile {
+				continue
+			}
+			envKey = envKey + "_FILE"
+			envValue, exist = env[envKey]
+			if !exist {
+				continue
+			}
+			if len(envValue) <= 0 {
+				// TODO: should we print something here?
+				continue
+			}
+			fileBytes, err := os.ReadFile(envValue)
+			if err != nil {
+				// TODO: should we print something here?
+				continue
+			}
+			envValue = string(fileBytes)
+			if TrimFileContent {
+				envValue = strings.TrimSpace(envValue)
+			}
 		}
 
 		isEmpty := len(envValue) <= 0
