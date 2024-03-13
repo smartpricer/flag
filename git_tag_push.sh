@@ -1,5 +1,10 @@
 #!/bin/bash
 
-echo Pushing $(cat VERSION)
-git tag $(cat VERSION)
-git push origin $(cat VERSION)
+VERSION=$(cat VERSION)
+
+echo Clearing old tags
+git tag -d $VERSION
+git push --delete origin $VERSION
+echo Pushing $VERSION
+git tag $VERSION
+git push origin $VERSION
