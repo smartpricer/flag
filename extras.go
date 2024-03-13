@@ -21,15 +21,15 @@ var (
 	// available on disk.
 	DefaultConfigFlagname = "config"
 
-	// If ReadValueFromUnderscoreFile is set to true, env parsing will look for envkey with _FILE suffix.
+	// If ReadUnderscoreFile is set to true, env parsing will look for envkey with _FILE suffix.
 	// If ENVKEY_FILE contains a filepath, the corrensponding file will be read and its value be used.
 	// This enables seemless support for Docker secrets.
-	ReadValueFromUnderscoreFile = false
+	ReadUnderscoreFile = false
 
-	// If WhitespaceTrimUnderscoreFileContent is set to true, any annoying new lines at the end
+	// If TrimFileContent is set to true, any annoying new lines at the end
 	// or preceding spaces will be trimmed. Whitespaces enclosed by other characters are not affected.
 	// This is mainly thought for cases, where a new line might change an important key.
-	WhitespaceTrimUnderscoreFileContent = false
+	TrimFileContent = false
 )
 
 func parseEnvToMap(environ []string) map[string]string {
@@ -124,11 +124,11 @@ func (f *FlagSet) ParseEnv(environ []string) error {
 	return nil
 }
 
-// NewFlagSetWithEnvPrefix returns a new empty flag set with the specified name,
-// environment variable prefix, and error handling property.
-func NewFlagSetWithEnvPrefix(name string, prefix string, errorHandling ErrorHandling) *FlagSet {
+// NewFlagSetWithExtras returns a new empty flag set with the specified name and error handling,
+// as well as an environment variable prefix, and if ENVKEY_FILE should be supported.
+func NewFlagSetWithExtras(name string, errorHandling ErrorHandling, envPrefix string, readUnderscoreFile bool, trimFileContent bool) *FlagSet {
 	f := NewFlagSet(name, errorHandling)
-	f.envPrefix = prefix
+	f.envPrefix = envPrefix
 	return f
 }
 
