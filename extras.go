@@ -11,9 +11,26 @@ import (
 	"strings"
 )
 
+var (
 // EnvironmentPrefix defines a string that will be implicitly prefixed to a
 // flag name before looking it up in the environment variables.
-var EnvironmentPrefix = ""
+	EnvironmentPrefix = ""
+
+	// DefaultConfigFlagname defines the flag name of the optional config file
+	// path. Used to lookup and parse the config file when a default is set and
+	// available on disk.
+	DefaultConfigFlagname = "config"
+
+	// If ReadValueFromUnderscoreFile is set to true, env parsing will look for envkey with _FILE suffix.
+	// If ENVKEY_FILE contains a filepath, the corrensponding file will be read and its value be used.
+	// This enables seemless support for Docker secrets.
+	ReadValueFromUnderscoreFile = false
+
+	// If WhitespaceTrimUnderscoreFileContent is set to true, any annoying new lines at the end
+	// or preceding spaces will be trimmed. Whitespaces enclosed by other characters are not affected.
+	// This is mainly thought for cases, where a new line might change an important key.
+	WhitespaceTrimUnderscoreFileContent = false
+)
 
 func parseEnvToMap(environ []string) map[string]string {
 	env := make(map[string]string)
@@ -114,11 +131,6 @@ func NewFlagSetWithEnvPrefix(name string, prefix string, errorHandling ErrorHand
 	f.envPrefix = prefix
 	return f
 }
-
-// DefaultConfigFlagname defines the flag name of the optional config file
-// path. Used to lookup and parse the config file when a default is set and
-// available on disk.
-var DefaultConfigFlagname = "config"
 
 // ParseFile parses flags from the file in path.
 // Same format as commandline argumens, newlines and lines beginning with a
