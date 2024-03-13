@@ -102,7 +102,7 @@ func (f *FlagSet) ParseEnv(environ []string) error {
 		envValue, exist := env[envKey]
 		if !exist {
 			// parsing of _FILE
-			if !ReadUnderscoreFile {
+			if !f.readUnderscoreFile {
 				continue
 			}
 			envKey = envKey + "_FILE"
@@ -120,7 +120,7 @@ func (f *FlagSet) ParseEnv(environ []string) error {
 				continue
 			}
 			envValue = string(fileBytes)
-			if TrimFileContent {
+			if f.trimFileContent {
 				envValue = strings.TrimSpace(envValue)
 			}
 		}

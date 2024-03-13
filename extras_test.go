@@ -71,6 +71,22 @@ func TestParseEnv(t *testing.T) {
 	}
 }
 
+func TestParseEnvFile(t *testing.T) {
+	expectedFileContent := "InHereCouldBeYourPreciosSecretYouWantToKeepSecure"
+	syscall.Setenv("YOUR_SECRET_FILE", "./testdata/docker-secret")
+	f := NewFlagSetWithExtras(os.Args[0], ContinueOnError, "", true, true)
+
+	secretFlag := f.String("your-secret", "", "secret value")
+
+	err := f.ParseEnv(os.Environ())
+	if err != nil {
+		t.Fatal("expected no error; got ", err)
+	}
+	if *secretFlag != expectedFileContent {
+		t.Fatal("expected my secret; got ", *secretFlag)
+	}
+}
+
 // Test parsing a configuration file
 func TestParseFile(t *testing.T) {
 
