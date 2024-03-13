@@ -408,8 +408,6 @@ type FlagSet struct {
 	actual map[string]*Flag
 	// formal has the flags which are registered
 	formal map[string]*Flag
-	// prefix to all env variable names /* jnovack/flag */
-	envPrefix string
 	// arguments after flags
 	args []string
 	// ErrorHandling defines how [FlagSet.Parse] behaves if the parse fails
@@ -418,6 +416,8 @@ type FlagSet struct {
 	output io.Writer
 	// flags which didn't exist at the time of Set
 	undef map[string]string
+
+	FlagSetExtras
 }
 
 // A Flag represents the state of a flag.
@@ -1297,5 +1297,7 @@ func NewFlagSet(name string, errorHandling ErrorHandling) *FlagSet {
 func (f *FlagSet) Init(name string, errorHandling ErrorHandling) {
 	f.name = name
 	f.envPrefix = EnvironmentPrefix /* jnovack/flag */
+	f.readUnderscoreFile = ReadUnderscoreFile
+	f.trimFileContent = TrimFileContent
 	f.errorHandling = errorHandling
 }

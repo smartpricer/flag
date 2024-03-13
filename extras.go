@@ -11,6 +11,13 @@ import (
 	"strings"
 )
 
+type FlagSetExtras struct {
+	// prefix to all env variable names /* jnovack/flag */
+	envPrefix          string
+	readUnderscoreFile bool
+	trimFileContent    bool
+}
+
 var (
 	// EnvironmentPrefix defines a string that will be implicitly prefixed to a
 	// flag name before looking it up in the environment variables.
@@ -150,6 +157,8 @@ func (f *FlagSet) ParseEnv(environ []string) error {
 func NewFlagSetWithExtras(name string, errorHandling ErrorHandling, envPrefix string, readUnderscoreFile bool, trimFileContent bool) *FlagSet {
 	f := NewFlagSet(name, errorHandling)
 	f.envPrefix = envPrefix
+	f.readUnderscoreFile = readUnderscoreFile
+	f.trimFileContent = trimFileContent
 	return f
 }
 
