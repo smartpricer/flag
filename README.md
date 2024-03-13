@@ -4,6 +4,12 @@
 [![Go Report](https://goreportcard.com/badge/github.com/jnovack/flag)](https://goreportcard.com/report/github.com/jnovack/flag)
 [![codecov](https://codecov.io/gh/jnovack/flag/branch/master/graph/badge.svg)](https://codecov.io/gh/jnovack/flag)
 
+# dsbferris/flag
+Added support for _FILE env variables.
+Updated with latest GO v1.22.1.
+Version of this package always matches the GO Version it was build upon 
+plus one additional patch version, e.g. v1.22.1.1.
+
 # jnovack/flag
 
 **jnovack/flag** is a drop in replacement for Go's flag package with the
