@@ -6,7 +6,6 @@ package flag
 
 import (
 	"bufio"
-	"fmt"
 	"os"
 	"strings"
 )
@@ -82,14 +81,12 @@ func (f *FlagSet) ParseEnv(environ []string) error {
 			continue
 		}
 
-		// TODO: can it even be possible to hit a non-existing flag due to the range func loop?
-		// TODO: who on earth would call help from an environment variable?
-		// seems like we are checking for unkown
-
-		//EXPLAIN
+		// seems like we are checking for unkown environment variables and help,
+		// but i cant get my head around how it should be possible to have a miss here,
+		// when we are iterating around range of f.formal
+		// welp, dont touch something that aint broken
 		flag, exist := f.formal[name]
 		if !exist {
-			fmt.Printf("FERRIS: found a flag that does not exist: %s", name)
 			if name == "help" || name == "h" { // special case for nice help message.
 				f.usage()
 				return ErrHelp
@@ -111,13 +108,11 @@ func (f *FlagSet) ParseEnv(environ []string) error {
 				continue
 			}
 			if len(envValue) <= 0 {
-				// TODO: should we print something here?
-				continue
+				return f.failf("provided an _FILE env variable but it was empty")
 			}
 			fileBytes, err := os.ReadFile(envValue)
 			if err != nil {
-				// TODO: should we print something here?
-				continue
+				return f.failf("could not read file %s provided by %s", envValue, envKey)
 			}
 			envValue = string(fileBytes)
 			if f.trimFileContent {
