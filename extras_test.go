@@ -160,6 +160,8 @@ func TestDefaultConfigFlagname(t *testing.T) {
 	f.Uint("uint", 0, "uint value")
 	f.Uint64("uint64", 0, "uint64 value")
 	stringFlag := f.String("string", "0", "string value")
+	f.String("string2", "0", "string value")
+	f.String("string3-env-like", "0", "string value")
 	f.Float64("float64", 0, "float64 value")
 	f.Duration("duration", 5*time.Second, "time.Duration value")
 
