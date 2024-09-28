@@ -99,6 +99,8 @@ func TestParseFile(t *testing.T) {
 	uintFlag := f.Uint("uint", 0, "uint value")
 	uint64Flag := f.Uint64("uint64", 0, "uint64 value")
 	stringFlag := f.String("string", "0", "string value")
+	string2Flag := f.String("string2", "0", "string2 value")
+	string3Flag := f.String("string3-env-like", "0", "string3 value")
 	float64Flag := f.Float64("float64", 0, "float64 value")
 	durationFlag := f.Duration("duration", 5*time.Second, "time.Duration value")
 
@@ -126,6 +128,12 @@ func TestParseFile(t *testing.T) {
 	}
 	if *stringFlag != "hello" {
 		t.Error("string flag should be `hello`, is ", *stringFlag)
+	}
+	if *string2Flag != "world" {
+		t.Error("string2 flag should be `world`, is", *string2Flag)
+	}
+	if *string3Flag != "foo" {
+		t.Error("string3-env-like flag should be `foo`, is", *string2Flag)
 	}
 	if *float64Flag != 2718e28 {
 		t.Error("float64 flag should be 2718e28, is ", *float64Flag)

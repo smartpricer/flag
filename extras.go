@@ -179,7 +179,7 @@ func (f *FlagSet) ParseFile(path string) error {
 		}
 
 		// Ignore comments
-		if line[:1] == "#" {
+		if line[:1] == "#" || line == "---" {
 			continue
 		}
 
@@ -187,9 +187,16 @@ func (f *FlagSet) ParseFile(path string) error {
 		var name, value string
 		hasValue := false
 		for i, v := range line {
-			if v == '=' || v == ' ' {
+			if v == '=' || v == ' ' || v == ':' {
 				hasValue = true
-				name, value = line[:i], line[i+1:]
+				name, value = strings.TrimSpace(line[:i]), strings.TrimSpace(line[i+1:])
+
+				// check if the name is an env name
+				for srcName := range f.formal {
+					if flagNameToEnvKey(srcName, f.envPrefix) == name {
+						name = srcName
+					}
+				}
 				break
 			}
 		}
