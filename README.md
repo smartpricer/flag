@@ -1,8 +1,9 @@
-[![Github](https://badgen.net/badge/dsbferris/flag/purple?icon=github)](https://github.com/dsbferris/flag)
-<!--- [![Build Status](https://github.com/dsbferris/flag/workflows/main/badge.svg)](https://github.com/dsbferris/flag/actions) --->
-[![GoDoc](https://godoc.org/github.com/dsbferris/flag?status.svg)](http://godoc.org/github.com/dsbferris/flag)
-[![Go Report](https://goreportcard.com/badge/github.com/dsbferris/flag)](https://goreportcard.com/report/github.com/dsbferris/flag)
-[![codecov](https://codecov.io/gh/dsbferris/flag/branch/master/graph/badge.svg)](https://codecov.io/gh/dsbferris/flag)
+# smartpricer/flag
+
+- Add support for yaml-like config file format
+- Change config file to support environment variable-style flag names
+
+`go get github.com/smartpricer/flag`
 
 # dsbferris/flag
 Added support for _FILE env variables.  
