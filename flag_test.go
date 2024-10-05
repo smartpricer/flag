@@ -20,7 +20,7 @@ import (
 	"testing"
 	"time"
 
-	. "github.com/dsbferris/flag"
+	. "github.com/smartpricer/flag"
 )
 
 func boolString(s string) string {

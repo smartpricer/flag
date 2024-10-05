@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/dsbferris/flag"
+	"github.com/smartpricer/flag"
 )
 
 func main() {
