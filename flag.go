@@ -1251,9 +1251,9 @@ func (f *FlagSet) Parsed() bool {
 
 // Parse parses the command-line flags from [os.Args][1:]. Must be called
 // after all flags are defined and before flags are accessed by the program.
-func Parse() {
+func Parse() error {
 	// Ignore errors; CommandLine is set for ExitOnError.
-	CommandLine.Parse(os.Args[1:])
+	return CommandLine.Parse(os.Args[1:])
 }
 
 // Parsed reports whether the command-line flags have been parsed.
@@ -1264,7 +1264,7 @@ func Parsed() bool {
 // CommandLine is the default set of command-line flags, parsed from [os.Args].
 // The top-level functions such as [BoolVar], [Arg], and so on are wrappers for the
 // methods of CommandLine.
-var CommandLine = NewFlagSet(os.Args[0], ExitOnError)
+var CommandLine = NewFlagSet(os.Args[0], ContinueOnError)
 
 func init() {
 	// Override generic FlagSet default Usage with call to global Usage.
