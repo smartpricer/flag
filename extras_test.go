@@ -180,6 +180,27 @@ func TestDefaultConfigFlagname(t *testing.T) {
 	}
 }
 
+func TestDefaultConfigFlagnameYAML(t *testing.T) {
+	f := NewFlagSet("test", ContinueOnError)
+
+	stringFlag := f.String("string", "0", "string value")
+
+	f.String(DefaultConfigFlagname, "./testdata/test.yml", "config path")
+
+	if err := os.Unsetenv("STRING"); err != nil {
+		t.Error(err)
+	}
+
+	if err := f.Parse([]string{}); err != nil {
+		t.Error("parse failed; ", err)
+	}
+
+	if *stringFlag != "helloYAML" {
+		t.Error("string flag should be `hello`, is", *stringFlag)
+	}
+}
+
+
 func TestDefaultConfigFlagnameMissingFile(t *testing.T) {
 	f := NewFlagSet("test", ContinueOnError)
 	f.String(DefaultConfigFlagname, "./testdata/missing", "config path")
