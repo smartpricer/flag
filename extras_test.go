@@ -200,6 +200,35 @@ func TestDefaultConfigFlagnameYAML(t *testing.T) {
 	}
 }
 
+func TestDefaultConfigFlagnameMultiple(t *testing.T) {
+	f := NewFlagSet("test", ContinueOnError)
+
+	f.Bool("bool", false, "bool value")
+	f.Bool("bool2", false, "bool2 value")
+	f.Int("int", 0, "int value")
+	f.Int64("int64", 0, "int64 value")
+	f.Uint("uint", 0, "uint value")
+	f.Uint64("uint64", 0, "uint64 value")
+	stringFlag := f.String("string", "0", "string value")
+	f.String("string2", "0", "string value")
+	f.String("string3-env-like", "0", "string value")
+	f.Float64("float64", 0, "float64 value")
+	f.Duration("duration", 5*time.Second, "time.Duration value")
+
+	f.String(DefaultConfigFlagname, "./testdata/test.yml:./testdata/test.conf", "config path")
+
+	if err := os.Unsetenv("STRING"); err != nil {
+		t.Error(err)
+	}
+
+	if err := f.Parse([]string{}); err != nil {
+		t.Error("parse failed; ", err)
+	}
+
+	if *stringFlag != "helloYAML" {
+		t.Error("string flag should be `hello`, is", *stringFlag)
+	}
+}
 
 func TestDefaultConfigFlagnameMissingFile(t *testing.T) {
 	f := NewFlagSet("test", ContinueOnError)

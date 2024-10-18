@@ -1225,19 +1225,23 @@ func (f *FlagSet) parseExtras() error {
 		cFile = cf.Value.String()
 	}
 	if cFile != "" {
-		if err := f.ParseFile(cFile); err != nil {
-			switch f.errorHandling {
-			case ContinueOnError:
-				return err
-			case ExitOnError:
-				if err == ErrHelp {
-					os.Exit(0)
+		singleFiles := strings.Split(cFile, ":")
+
+		for _, singleFile := range singleFiles {
+			if err := f.ParseFile(singleFile); err != nil {
+				switch f.errorHandling {
+				case ContinueOnError:
+					return err
+				case ExitOnError:
+					if err == ErrHelp {
+						os.Exit(0)
+					}
+					os.Exit(2)
+				case PanicOnError:
+					panic(err)
 				}
-				os.Exit(2)
-			case PanicOnError:
-				panic(err)
+				return err
 			}
-			return err
 		}
 	}
 	// /* jnovack/flag END */

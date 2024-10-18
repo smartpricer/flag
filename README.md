@@ -1,5 +1,6 @@
 # smartpricer/flag
 
+- Add support for multiple config files (separated by colon `:`)
 - Add support for yaml-like config file format
 - Change config file to support environment variable-style flag names
 
