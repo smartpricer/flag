@@ -1,7 +1,7 @@
 # smartpricer/flag
 
 - Add support for multiple config files (separated by colon `:`)
-- Add support for yaml-like config file format
+- Add support for YAML file config file format
 - Change config file to support environment variable-style flag names
 
 `go get github.com/smartpricer/flag`
