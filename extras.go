@@ -6,6 +6,9 @@ package flag
 
 import (
 	"bufio"
+	"errors"
+	"fmt"
+	"gopkg.in/yaml.v3"
 	"os"
 	"strings"
 )
@@ -158,14 +161,25 @@ func NewFlagSetWithExtras(name string, errorHandling ErrorHandling, envPrefix st
 }
 
 // ParseFile parses flags from the file in path.
+//
+// If the file is a YAML (.yaml, .yaml) file, it will be loaded as actual YAML.
+func (f *FlagSet) ParseFile(path string) error {
+	if strings.HasSuffix(path, ".yaml") || strings.HasSuffix(path, ".yml") {
+		return f.parseFile_YAML(path)
+	}
+
+	return f.parseFile_PlainText(path)
+}
+
+// parseFile_PlainText parses flags from the file in path.
 // Same format as commandline argumens, newlines and lines beginning with a
 // "#" charater are ignored. Flags already set will be ignored.
-func (f *FlagSet) ParseFile(path string) error {
+func (f *FlagSet) parseFile_PlainText(path string) error {
 
 	// Extract arguments from file
 	fp, err := os.Open(path)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to open file '%s': %v", path, err)
 	}
 	defer fp.Close()
 
@@ -195,6 +209,7 @@ func (f *FlagSet) ParseFile(path string) error {
 				for srcName := range f.formal {
 					if flagNameToEnvKey(srcName, f.envPrefix) == name {
 						name = srcName
+						break
 					}
 				}
 				break
@@ -244,6 +259,91 @@ func (f *FlagSet) ParseFile(path string) error {
 
 	if err := scanner.Err(); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+type yamlValue struct {
+	Node  *yaml.Node
+	Value string
+	Error error
+}
+
+var (
+	_ yaml.Unmarshaler = &yamlValue{} // ensure type compatibility
+)
+
+func (y *yamlValue) UnmarshalYAML(value *yaml.Node) error {
+	y.Node = value
+
+	if value.Kind != yaml.ScalarNode {
+		y.Error = errors.New("only scalar/single values are supported")
+		return nil
+	}
+
+	y.Value = value.Value
+
+	return nil
+}
+
+func (f *FlagSet) parseFile_YAML(path string) error {
+	// open the yaml file
+	fp, err := os.Open(path)
+	if err != nil {
+		return fmt.Errorf("failed to open file '%s': %v", path, err)
+	}
+	defer fp.Close()
+
+	// read the root object
+	var values map[string]yamlValue
+
+	err = yaml.NewDecoder(fp).Decode(&values)
+	if err != nil {
+		return fmt.Errorf("failed to parse file '%s': %v", path, err)
+	}
+
+	// parse the fields
+	for name, value := range values {
+
+		// check if the name is an env name
+		for srcName := range f.formal {
+			if flagNameToEnvKey(srcName, f.envPrefix) == name {
+				name = srcName
+				break
+			}
+		}
+
+		// Ignore flag when already set; arguments have precedence over file
+		if f.actual[name] != nil {
+			continue
+		}
+
+		m := f.formal
+		flag, alreadythere := m[name]
+		if !alreadythere {
+			if name == "help" || name == "h" { // special case for nice help message.
+				f.usage()
+				return ErrHelp
+			}
+			return f.failf("configuration variable provided but not defined: %s", name)
+		}
+
+		// forward error
+		if value.Error != nil {
+			return f.failf("invalid value %q for configuration variable %s at line %v: %v", value.Value, name, value.Node.Line, value.Error)
+		}
+
+		// set the flag value
+		if err := flag.Value.Set(value.Value); err != nil {
+			return f.failf("invalid value %q for configuration variable %s: %v", value.Value, name, err)
+		}
+
+		// update f.actual
+		if f.actual == nil {
+			f.actual = make(map[string]*Flag)
+		}
+		f.actual[name] = flag
 	}
 
 	return nil

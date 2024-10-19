@@ -2,15 +2,14 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package flag_test
+package flag
 
 import (
+	"gopkg.in/yaml.v3"
 	"os"
 	"syscall"
 	"testing"
 	"time"
-
-	. "github.com/smartpricer/flag"
 )
 
 // Test parsing a environment variables
@@ -275,5 +274,70 @@ func TestTestingPackageFlags(t *testing.T) {
 	f := NewFlagSet("test", ContinueOnError)
 	if err := f.Parse([]string{"-test.v", "-test.count", "1"}); err == nil {
 		t.Error(err)
+	}
+}
+
+func TestYAMLValues_Empty(t *testing.T) {
+	var v map[string]yamlValue
+
+	err := yaml.Unmarshal([]byte(""), &v)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(v) > 0 {
+		t.Error("expected empty")
+	}
+}
+
+func TestYAMLValues_Simple(t *testing.T) {
+	var v map[string]yamlValue
+
+	err := yaml.Unmarshal([]byte(`
+str: hello_world
+str2: "hello_world"
+str3: 'hello_world'
+ml: |
+  line 1
+  line 2
+i: 12345
+f: 12345.6789
+b: true
+obj:
+  ignore: me
+ar:
+  - ignore
+  - me
+`), &v)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if vv, ok := v["str"]; !ok || vv.Value != "hello_world" {
+		t.Error("unexpected value for str")
+	}
+	if vv, ok := v["str2"]; !ok || vv.Value != "hello_world" {
+		t.Error("unexpected value for str2")
+	}
+	if vv, ok := v["str3"]; !ok || vv.Value != "hello_world" {
+		t.Error("unexpected value for str3")
+	}
+	if vv, ok := v["ml"]; !ok || vv.Value != "line 1\nline 2\n" {
+		t.Error("unexpected value for ml")
+	}
+	if vv, ok := v["i"]; !ok || vv.Value != "12345" {
+		t.Error("unexpected value for i")
+	}
+	if vv, ok := v["f"]; !ok || vv.Value != "12345.6789" {
+		t.Error("unexpected value for f")
+	}
+	if vv, ok := v["b"]; !ok || vv.Value != "true" {
+		t.Error("unexpected value for b")
+	}
+	if vv, ok := v["obj"]; !ok || vv.Value != "" || vv.Error == nil {
+		t.Error("unexpected value for obj")
+	}
+	if vv, ok := v["ar"]; !ok || vv.Value != "" || vv.Error == nil {
+		t.Error("unexpected value for ar")
 	}
 }

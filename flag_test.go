@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package flag_test
+package flag
 
 import (
 	"bytes"
@@ -19,8 +19,6 @@ import (
 	"sync"
 	"testing"
 	"time"
-
-	. "github.com/smartpricer/flag"
 )
 
 func boolString(s string) string {
