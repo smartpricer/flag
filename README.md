@@ -2,7 +2,9 @@
 
 - Add support for multiple config files (separated by colon `:`)
 - Add support for YAML file config file format
+- Add extended handling for boolean env variables (see `TestFlagSetBooleanVariants()`)
 - Change config file to support environment variable-style flag names
+- Change boolean env variable behavior: empty env variable is now considered *false*, instead of *true*
 
 `go get github.com/smartpricer/flag`
 

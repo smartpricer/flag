@@ -41,8 +41,8 @@ func TestParseEnv(t *testing.T) {
 	if err != nil {
 		t.Fatal("expected no error; got ", err)
 	}
-	if *boolFlag != true {
-		t.Error("bool flag should be true, is ", *boolFlag)
+	if *boolFlag != false {
+		t.Error("bool flag should be false, is ", *boolFlag)
 	}
 	if *bool2Flag != true {
 		t.Error("bool2 flag should be true, is ", *bool2Flag)
@@ -267,6 +267,47 @@ func TestFlagSetParseErrors(t *testing.T) {
 	expected = `invalid value "bad" for configuration variable int: parse error`
 	if err := fs.Parse(args); err == nil || err.Error() != expected {
 		t.Errorf("expected error %q parsing from config, got: %v", expected, err)
+	}
+}
+
+func TestFlagSetBooleanVariants(t *testing.T) {
+	expectations := []struct {
+		Input  string
+		Output bool
+	}{
+		{"true", true},
+		{"false", false},
+		{"True", true},
+		{"False", false},
+		{"1", true},
+		{"0", false},
+		{"yes", true},
+		{"no", false},
+		{"y", true},
+		{"n", false},
+		{"on", true},
+		{"off", false},
+		{"ON", true},
+		{"OFF", false},
+		{"", false},
+	}
+
+	for _, expectation := range expectations {
+		f := NewFlagSet("test", ContinueOnError)
+		v := f.Bool("my-boolean", false, "test boolean")
+
+		if err := os.Setenv("MY_BOOLEAN", expectation.Input); err != nil {
+			t.Error(err)
+		}
+		if err := f.Parse([]string{}); err != nil {
+			t.Error(err)
+		}
+		if *v != expectation.Output {
+			t.Errorf("expected '%v' to be %v", expectation.Input, expectation.Output)
+		}
+		if err := os.Unsetenv("MY_BOOLEAN"); err != nil {
+			t.Error(err)
+		}
 	}
 }
 

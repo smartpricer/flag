@@ -65,6 +65,22 @@ func flagNameToEnvKey(name, envPrefix string) string {
 	return envKey
 }
 
+func parseEnvBool(s string) string {
+	b := true
+
+	if s == "" || s == "0" {
+		b = false
+	} else if ss := strings.ToLower(s); ss == "false" || ss == "no" || ss == "off" || ss == "n" {
+		b = false
+	}
+
+	// finalize
+	if b {
+		return "true"
+	}
+	return "false"
+}
+
 // ParseEnv parses flags from environment variables.
 // Flags already set will be ignored.
 func (f *FlagSet) ParseEnv(environ []string) error {
@@ -123,16 +139,9 @@ func (f *FlagSet) ParseEnv(environ []string) error {
 			}
 		}
 
-		isEmpty := len(envValue) <= 0
-
 		if fv, ok := flag.Value.(boolFlag); ok && fv.IsBoolFlag() { // special case: doesn't need an arg
-			if !isEmpty {
-				if err := fv.Set(envValue); err != nil {
-					return f.failf("invalid boolean value %q for environment variable %s: %v", envValue, name, err)
-				}
-			} else {
-				// flag without value is regarded a bool
-				fv.Set("true")
+			if err := fv.Set(parseEnvBool(envValue)); err != nil {
+				return f.failf("invalid boolean value %q for environment variable %s: %v", envValue, name, err)
 			}
 		} else {
 			if err := flag.Value.Set(envValue); err != nil {
