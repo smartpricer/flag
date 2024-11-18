@@ -193,6 +193,8 @@ func (f *FlagSet) parseFile_PlainText(path string) error {
 	defer fp.Close()
 
 	scanner := bufio.NewScanner(fp)
+
+scan:
 	for scanner.Scan() {
 		line := scanner.Text()
 
@@ -241,7 +243,7 @@ func (f *FlagSet) parseFile_PlainText(path string) error {
 				f.usage()
 				return ErrHelp
 			}
-			return f.failf("configuration variable provided but not defined: %s", name)
+			continue scan // ignore unknown variables in config files
 		}
 
 		if fv, ok := flag.Value.(boolFlag); ok && fv.IsBoolFlag() { // special case: doesn't need an arg
@@ -313,6 +315,7 @@ func (f *FlagSet) parseFile_YAML(path string) error {
 	}
 
 	// parse the fields
+scan:
 	for name, value := range values {
 
 		// check if the name is an env name
@@ -335,7 +338,7 @@ func (f *FlagSet) parseFile_YAML(path string) error {
 				f.usage()
 				return ErrHelp
 			}
-			return f.failf("configuration variable provided but not defined: %s", name)
+			continue scan // ignore unknown variables in config files
 		}
 
 		// forward error

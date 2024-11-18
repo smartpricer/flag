@@ -5,6 +5,7 @@
 - Add extended handling for boolean env variables (see `TestFlagSetBooleanVariants()`)
 - Change config file to support environment variable-style flag names
 - Change boolean env variable behavior: empty env variable is now considered *false*, instead of *true*
+- Change unknown variables in config files are now being ignored
 
 `go get github.com/smartpricer/flag`
 

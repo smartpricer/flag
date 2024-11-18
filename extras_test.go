@@ -144,8 +144,8 @@ func TestParseFile(t *testing.T) {
 
 func TestParseFileUnknownFlag(t *testing.T) {
 	f := NewFlagSet("test", ContinueOnError)
-	if err := f.ParseFile("./testdata/bad_test.conf"); err == nil {
-		t.Error("parse did not fail for unknown flag; ", err)
+	if err := f.ParseFile("./testdata/bad_test.conf"); err != nil {
+		t.Error("parse did not ignore unknown flag; ", err)
 	}
 }
 
